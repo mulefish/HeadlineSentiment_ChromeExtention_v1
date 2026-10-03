@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Headline Highlighter</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        width: 480px;
+        padding: 15px;
+      }
+
+      h2 {
+        color: #333;
+        margin: 0 0 12px;
+      }
+
+      label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 5px;
+      }
+
+      textarea {
+        width: 100%;
+        box-sizing: border-box;
+        min-height: 70px;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-family: inherit;
+        resize: vertical;
+      }
+
+      .hint {
+        color: #666;
+        font-size: 12px;
+        margin: 4px 0 12px;
+      }
+
+      .buttons {
+        display: flex;
+        gap: 10px;
+      }
+
+      button {
+        padding: 8px 15px;
+        background-color: #4285f4;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+
+      button:hover {
+        background-color: #3367d6;
+      }
+
+      button:disabled {
+        background-color: #9bb8f0;
+        cursor: default;
+      }
+
+      #revert {
+        background-color: #757575;
+      }
+
+      #revert:hover {
+        background-color: #5f5f5f;
+      }
+
+      #results {
+        list-style: none;
+        margin: 10px 0 0;
+        padding: 0;
+        max-height: 360px;
+        overflow-y: auto;
+      }
+
+      #results li {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 7px 4px;
+        border-bottom: 1px solid #eee;
+        cursor: pointer;
+        line-height: 1.35;
+      }
+
+      #results li:hover {
+        background-color: #f5f5f5;
+      }
+
+      #results li.match .headline-text {
+        font-weight: bold;
+      }
+
+      #results li:not(.match) .headline-text {
+        color: #777;
+      }
+
+      .score {
+        flex: 0 0 48px;
+        text-align: center;
+        font-weight: bold;
+        font-size: 13px;
+        padding: 3px 0;
+        border-radius: 4px;
+        color: #000;
+      }
+
+      .legend {
+        color: #666;
+        font-size: 12px;
+        margin-top: 8px;
+      }
+
+      #status {
+        margin-top: 12px;
+        min-height: 20px;
+        white-space: pre-wrap;
+        line-height: 1.4;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Headline Highlighter</h2>
+
+    <label for="criteria">Which headlines should be highlighted?</label>
+    <textarea
+      id="criteria"
+      placeholder="SOmething will go here"
+    ></textarea>
+    <p class="hint">How to do forgeign langs?
+    </p>
+
+    <div class="buttons">
+      <button id="highlight">Highlight Headlines</button>
+      <button id="revert">Revert</button>
+    </div>
+
+    <div id="status"></div>
+    <ul id="results"></ul>
+    <p class="legend" id="legend" hidden>
+      Sentiment: -1 very negative, 0 neutral, 1 very positive, X unsure.
+      Bold = highlighted. Click a headline to scroll to it.
+    </p>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
