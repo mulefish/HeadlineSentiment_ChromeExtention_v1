@@ -8,6 +8,9 @@ description you type, such as "positive news" or "anything about the economy".
 Everything runs on your computer using Chrome's built-in **Gemini Nano** model
 (the Prompt API). No API key is needed and nothing is sent to a server.
 
+It can also translate Chinese headlines into English first, using Chrome's
+built-in **Translator API**. This also runs on your computer.
+
 ## Example
 ![Example](example.png)
 
@@ -83,12 +86,16 @@ After editing any file, click the reload icon on the extension's card in
 2. Click the extension icon.
 3. Optionally type which headlines you want highlighted. Leave the box empty
    to highlight every headline.
-4. Click **Highlight Headlines**.
+4. For Chinese news sites, tick **Translate Chinese headlines to English**.
+   The setting is remembered.
+5. Click **Highlight Headlines**.
    - Matching headlines are highlighted in **yellow** on the page, and their
      story text in **light blue**.
    - The popup lists every headline with its sentiment score. Bold rows are the
      highlighted ones. Click a row to scroll to that headline.
-5. Click **Revert** to remove the highlights.
+   - Translated headlines show in English, with the original Chinese in grey
+     underneath. The page itself isn't changed.
+6. Click **Revert** to remove the highlights.
 
 ## How it works
 
@@ -103,6 +110,15 @@ After editing any file, click the reload icon on the extension's card in
   in a fixed JSON format with a sentiment score, an "unsure" flag (shown as X)
   and a match decision for each headline. Results appear in the popup as each
   group finishes.
+- **Chinese:** Chinese doesn't use spaces between words, so `content.js`
+  counts each Chinese or Japanese character as a word when deciding what's
+  long enough to be a headline. Gemini Nano only supports English, Spanish and
+  Japanese, so when translation is on, any headline or snippet containing
+  Chinese characters (and no Japanese kana) is first translated by Chrome's
+  [Translator API](https://developer.chrome.com/docs/ai/translator-api)
+  (`zh` → `en`). It uses a separate translation model, not Gemini Nano. Chrome
+  downloads the language pack once, after which translation works offline.
+  The English text is then scored as usual.
 
 # Nothing is happening?
 

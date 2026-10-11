@@ -30,8 +30,17 @@ if (!window.__headlineHighlighter) {
     return el.innerText.replace(/\s+/g, " ").trim();
   }
 
+  // Chinese and Japanese don't put spaces between words, so each of their
+  // characters is counted as a word, and as 3 letters when measuring length.
+  const CJK = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/gu;
+
   function wordCount(text) {
-    return text.split(/\s+/).filter(Boolean).length;
+    const cjk = (text.match(CJK) || []).length;
+    return text.replace(CJK, " ").split(/\s+/).filter(Boolean).length + cjk;
+  }
+
+  function textLength(text) {
+    return text.length + 2 * (text.match(CJK) || []).length;
   }
 
   function isHeadlineLike(el) {
@@ -103,8 +112,9 @@ if (!window.__headlineHighlighter) {
 
       const text = cleanText(el);
       // Real headlines are usually a few words long; skip labels like "Sport".
-      if (text.length < 15 || text.length > 300) continue;
-      if (text.split(" ").length < 3) continue;
+      const length = textLength(text);
+      if (length < 15 || length > 300) continue;
+      if (wordCount(text) < 3) continue;
       if (seenText.has(text)) continue;
       // Skip anything already claimed as another headline's text.
       if (el.closest(`[${TEXT_ID_ATTR}]`)) continue;

@@ -109,6 +109,18 @@
         color: #000;
       }
 
+      .original {
+        display: block;
+        color: #999;
+        font-size: 12px;
+        font-weight: normal;
+      }
+
+      label.option {
+        font-weight: normal;
+        cursor: pointer;
+      }
+
       .legend {
         color: #666;
         font-size: 12px;
@@ -129,9 +141,17 @@
     <label for="criteria">Which headlines should be highlighted?</label>
     <textarea
       id="criteria"
-      placeholder="SOmething will go here"
+      placeholder="e.g. positive news, or anything about the economy"
     ></textarea>
-    <p class="hint">How to do forgeign langs?
+    <p class="hint">Leave empty to highlight every headline.</p>
+
+    <label class="option">
+      <input type="checkbox" id="translate" />
+      Translate Chinese headlines to English
+    </label>
+    <p class="hint">
+      Translation runs on your computer with Chrome's built-in translator. The
+      first time, Chrome downloads a small Chinese-English language pack.
     </p>
 
     <div class="buttons">
@@ -143,7 +163,8 @@
     <ul id="results"></ul>
     <p class="legend" id="legend" hidden>
       Sentiment: -1 very negative, 0 neutral, 1 very positive, X unsure.
-      Bold = highlighted. Click a headline to scroll to it.
+      Bold = highlighted. Grey text under a headline is the original before
+      translation. Click a headline to scroll to it.
     </p>
 
     <script src="popup.js"></script>

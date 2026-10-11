@@ -1,5 +1,8 @@
 // Uses Chrome's built-in Prompt API (Gemini Nano, on-device) to score each
 // headline's sentiment and pick which ones match the user's description.
+// Optionally translates Chinese headlines to English first with Chrome's
+// built-in Translator API (also on-device), since Gemini Nano doesn't
+// support Chinese.
 
 const BATCH_SIZE = 10;
 const LANGUAGE_OPTIONS = {
@@ -13,11 +16,16 @@ const revertBtn = document.getElementById("revert");
 const statusDiv = document.getElementById("status");
 const resultsList = document.getElementById("results");
 const legend = document.getElementById("legend");
+const translateCheckbox = document.getElementById("translate");
 
-// Remember the last description between popup openings.
+// Remember the last description and settings between popup openings.
 criteriaInput.value = localStorage.getItem("criteria") || "";
 criteriaInput.addEventListener("input", () => {
   localStorage.setItem("criteria", criteriaInput.value);
+});
+translateCheckbox.checked = localStorage.getItem("translate") === "true";
+translateCheckbox.addEventListener("change", () => {
+  localStorage.setItem("translate", translateCheckbox.checked);
 });
 
 highlightBtn.addEventListener("click", async () => {
@@ -26,9 +34,13 @@ highlightBtn.addEventListener("click", async () => {
   clearResults();
 
   try {
-    // Create the model session first: downloading the model requires the
-    // user activation from this click, which expires after a short time.
-    const session = await createSession();
+    // Create the model session and translator first: downloading either
+    // model requires the user activation from this click, which expires
+    // after a short time, so both are started straight away.
+    const [session, translator] = await Promise.all([
+      createSession(),
+      translateCheckbox.checked ? createTranslator() : null,
+    ]);
 
     setStatus("Looking for headlines...");
     const tabId = await injectContentScript();
@@ -39,6 +51,7 @@ highlightBtn.addEventListener("click", async () => {
     if (!headlines.length) {
       setStatus("No headlines found on this page.");
       session.destroy();
+      translator?.destroy();
       return;
     }
 
@@ -48,12 +61,13 @@ highlightBtn.addEventListener("click", async () => {
     let total = 0;
 
     for (let start = 0; start < headlines.length; start += BATCH_SIZE) {
-      const batch = headlines.slice(start, start + BATCH_SIZE);
-      setStatus(
-        `Asking Gemini Nano about headlines ${start + 1}-${
-          start + batch.length
-        } of ${headlines.length}...`
-      );
+      let batch = headlines.slice(start, start + BATCH_SIZE);
+      const range = `${start + 1}-${start + batch.length} of ${headlines.length}`;
+      if (translator) {
+        setStatus(`Translating headlines ${range}...`);
+        batch = await translateBatch(translator, batch);
+      }
+      setStatus(`Asking Gemini Nano about headlines ${range}...`);
 
       const results = await analyzeBatch(session, batch, criteria);
       results.forEach((r) => {
@@ -73,6 +87,7 @@ highlightBtn.addEventListener("click", async () => {
       highlighted += count;
     }
     session.destroy();
+    translator?.destroy();
 
     const average = scored ? ` Average sentiment: ${formatScore(total / scored)}.` : "";
     setStatus(
@@ -135,6 +150,12 @@ function addResultRow(tabId, result) {
   const text = document.createElement("span");
   text.className = "headline-text";
   text.innerText = result.text;
+  if (result.original) {
+    const original = document.createElement("span");
+    original.className = "original";
+    original.innerText = result.original;
+    text.appendChild(original);
+  }
 
   li.append(score, text);
   li.addEventListener("click", () => {
@@ -214,7 +235,72 @@ async function createSession() {
   });
 }
 
-// Returns [{ id, text, score (number or null for unknown), matches }] for the batch.
+async function createTranslator() {
+  if (!("Translator" in self)) {
+    throw new Error(
+      "Chrome's built-in Translator API is not available. Use Chrome 138 or newer, " +
+        "or turn off translation."
+    );
+  }
+
+  const options = { sourceLanguage: "zh", targetLanguage: "en" };
+  const availability = await Translator.availability(options);
+  console.log("Translator availability:", availability);
+  if (availability === "unavailable") {
+    throw new Error(
+      "Chinese to English translation is not supported on this device. Turn off translation."
+    );
+  }
+
+  return Translator.create({
+    ...options,
+    monitor(m) {
+      m.addEventListener("downloadprogress", (e) => {
+        setStatus(
+          `Downloading Chinese-English language pack: ${Math.round(e.loaded * 100)}%\n` +
+            "This only happens once."
+        );
+      });
+    },
+  });
+}
+
+// Han characters with no Japanese kana, so Japanese kanji isn't sent to
+// the Chinese translator.
+function isChinese(text) {
+  return (
+    /\p{Script=Han}/u.test(text) &&
+    !/[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(text)
+  );
+}
+
+// Translates the Chinese headlines and snippets in a batch to English,
+// keeping the original headline to show in the popup.
+async function translateBatch(translator, batch) {
+  const translate = async (text) => {
+    if (!isChinese(text)) return text;
+    try {
+      return await translator.translate(text);
+    } catch (error) {
+      // An untranslated headline is still better than none.
+      console.error("Translation failed:", error);
+      return text;
+    }
+  };
+
+  return Promise.all(
+    batch.map(async (h) => {
+      if (!isChinese(h.text) && !isChinese(h.context)) return h;
+      const [text, context] = await Promise.all([
+        translate(h.text),
+        translate(h.context),
+      ]);
+      return { ...h, text, context, original: text !== h.text ? h.text : undefined };
+    })
+  );
+}
+
+// Returns [{ id, text, original, score (number or null for unknown), matches }] for the batch.
 async function analyzeBatch(session, batch, criteria) {
   const list = batch
     .map(
@@ -267,6 +353,7 @@ async function analyzeBatch(session, batch, criteria) {
     return {
       id: h.id,
       text: h.text,
+      original: h.original,
       score: known ? Math.max(-1, Math.min(1, r.sentiment)) : null,
       matches: criteria ? !!r?.matches : true,
     };
