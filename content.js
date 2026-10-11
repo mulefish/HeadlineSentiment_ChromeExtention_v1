@@ -8,6 +8,10 @@ if (!window.__headlineHighlighter) {
   const HIGHLIGHT_CLASS = "hh-highlight";
   const TEXT_HIGHLIGHT_CLASS = "hh-text-highlight";
   const STYLE_ID = "hh-style";
+  const MANUAL_CLASS = "hh-manual-highlight";
+
+  // Number of selections the user has highlighted, for the Revert message.
+  let manualCount = 0;
 
   const HEADLINE_SELECTORS = [
     "h1",
@@ -158,6 +162,11 @@ if (!window.__headlineHighlighter) {
         outline: 2px solid #4fc3f7 !important;
         border-radius: 3px;
       }
+      .${MANUAL_CLASS} {
+        background-color: #ffcc80 !important;
+        color: #000 !important;
+        border-radius: 2px;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -186,7 +195,64 @@ if (!window.__headlineHighlighter) {
     return count;
   }
 
-  function revert() {
+  // Highlights the text the user has selected on the page. A selection can
+  // cross element boundaries, so each selected text node is wrapped in its
+  // own span. Returns the selected text, or null if nothing is selected.
+  function highlightSelection() {
+    const selection = getSelection();
+    const text = selection.toString().replace(/\s+/g, " ").trim();
+    if (!selection.rangeCount || !text) return null;
+    addStyle();
+
+    for (let i = 0; i < selection.rangeCount; i++) {
+      const range = selection.getRangeAt(i);
+      const { startContainer, startOffset, endContainer, endOffset } = range;
+      const root = range.commonAncestorContainer;
+
+      const nodes = [];
+      if (root.nodeType === Node.TEXT_NODE) {
+        nodes.push(root);
+      } else {
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        while (walker.nextNode()) {
+          if (range.intersectsNode(walker.currentNode)) nodes.push(walker.currentNode);
+        }
+      }
+
+      for (let node of nodes) {
+        if (node.parentElement.closest(`script, style, noscript, .${MANUAL_CLASS}`)) {
+          continue;
+        }
+        // Split off the unselected parts at either end. The end is split
+        // first so the start offset is still correct.
+        if (node === endContainer) node.splitText(endOffset);
+        if (node === startContainer) node = node.splitText(startOffset);
+        if (!node.textContent.trim()) continue;
+
+        const span = document.createElement("span");
+        span.className = MANUAL_CLASS;
+        node.replaceWith(span);
+        span.appendChild(node);
+      }
+    }
+
+    selection.removeAllRanges();
+    manualCount++;
+    return { text };
+  }
+
+  function revertManual() {
+    document.querySelectorAll(`.${MANUAL_CLASS}`).forEach((span) => {
+      const parent = span.parentNode;
+      span.replaceWith(...span.childNodes);
+      parent.normalize(); // rejoin the text nodes split up when highlighting
+    });
+    const count = manualCount;
+    manualCount = 0;
+    return count;
+  }
+
+  function revertHeadlines() {
     const highlighted = document.querySelectorAll(`.${HIGHLIGHT_CLASS}`);
     highlighted.forEach((el) => el.classList.remove(HIGHLIGHT_CLASS));
     document
@@ -196,16 +262,24 @@ if (!window.__headlineHighlighter) {
       el.removeAttribute(ID_ATTR);
       el.removeAttribute(TEXT_ID_ATTR);
     });
-    document.getElementById(STYLE_ID)?.remove();
     return highlighted.length;
+  }
+
+  function revert() {
+    const count = revertHeadlines() + revertManual();
+    document.getElementById(STYLE_ID)?.remove();
+    return count;
   }
 
   chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
     if (req.type === "FIND_HEADLINES") {
-      revert(); // start fresh so ids match this run
+      // Start fresh so ids match this run, but keep the user's own highlights.
+      revertHeadlines();
       sendResponse({ headlines: findHeadlines() });
     } else if (req.type === "HIGHLIGHT") {
       sendResponse({ count: highlight(req.ids, req.scroll) });
+    } else if (req.type === "HIGHLIGHT_SELECTION") {
+      sendResponse({ selection: highlightSelection() });
     } else if (req.type === "SCROLL_TO") {
       scrollToHeadline(req.id);
       sendResponse({});

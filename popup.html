@@ -61,6 +61,14 @@
         cursor: default;
       }
 
+      #highlight-selection {
+        background-color: #fb8c00;
+      }
+
+      #highlight-selection:hover {
+        background-color: #ef6c00;
+      }
+
       #revert {
         background-color: #757575;
       }
@@ -69,7 +77,7 @@
         background-color: #5f5f5f;
       }
 
-      #results {
+      .rows {
         list-style: none;
         margin: 10px 0 0;
         padding: 0;
@@ -77,7 +85,7 @@
         overflow-y: auto;
       }
 
-      #results li {
+      .rows li {
         display: flex;
         align-items: flex-start;
         gap: 10px;
@@ -87,15 +95,15 @@
         line-height: 1.35;
       }
 
-      #results li:hover {
+      .rows li:hover {
         background-color: #f5f5f5;
       }
 
-      #results li.match .headline-text {
+      .rows li.match .headline-text {
         font-weight: bold;
       }
 
-      #results li:not(.match) .headline-text {
+      .rows li:not(.match) .headline-text {
         color: #777;
       }
 
@@ -114,6 +122,40 @@
         color: #999;
         font-size: 12px;
         font-weight: normal;
+      }
+
+      .source {
+        display: block;
+        color: #999;
+        font-size: 11px;
+        font-weight: normal;
+        margin-top: 2px;
+      }
+
+      h3 {
+        color: #333;
+        font-size: 15px;
+        margin: 16px 0 0;
+      }
+
+      #history {
+        max-height: 240px;
+      }
+
+      #history li {
+        cursor: default;
+      }
+
+      .history-buttons {
+        margin-top: 8px;
+      }
+
+      .history-buttons button {
+        background-color: #757575;
+      }
+
+      .history-buttons button:hover {
+        background-color: #5f5f5f;
       }
 
       label.option {
@@ -156,16 +198,31 @@
 
     <div class="buttons">
       <button id="highlight">Highlight Headlines</button>
+      <button id="highlight-selection">Highlight Selection</button>
       <button id="revert">Revert</button>
     </div>
+    <p class="hint">
+      To highlight something yourself, select it on the page, then click
+      Highlight Selection. It's translated (if turned on), scored and saved
+      under Your highlights.
+    </p>
 
     <div id="status"></div>
-    <ul id="results"></ul>
+    <ul class="rows" id="results"></ul>
     <p class="legend" id="legend" hidden>
       Sentiment: -1 very negative, 0 neutral, 1 very positive, X unsure.
       Bold = highlighted. Grey text under a headline is the original before
       translation. Click a headline to scroll to it.
     </p>
+
+    <div id="history-section" hidden>
+      <h3>Your highlights</h3>
+      <ul class="rows" id="history"></ul>
+      <div class="buttons history-buttons">
+        <button id="copy-history">Copy History</button>
+        <button id="clear-history">Clear History</button>
+      </div>
+    </div>
 
     <script src="popup.js"></script>
   </body>

@@ -1,3 +1,12 @@
+# Example sites
+ - https://www.china-cotton.org/
+ - https://cottonchina.org.cn/cncenew/
+ - https://www.tteb.com/
+ - https://www.czce.com.cn/
+ - https://www.cntac.org.cn/zixun/zhengce/202609/t20260922_4421853.html
+
+
+
 # Headline Highlighter
 
 A Chrome extension that finds the headlines on a page, scores each one's
@@ -95,7 +104,17 @@ After editing any file, click the reload icon on the extension's card in
      highlighted ones. Click a row to scroll to that headline.
    - Translated headlines show in English, with the original Chinese in grey
      underneath. The page itself isn't changed.
-6. Click **Revert** to remove the highlights.
+6. To highlight something yourself, select text on the page, open the popup
+   and click **Highlight Selection**. The text turns **orange**, and it's
+   translated (if turned on) and scored like a headline. Re-running
+   **Highlight Headlines** keeps your highlights.
+   - Each one is saved under **Your highlights** in the popup, newest first,
+     with its score, the page it came from and when. The list is kept between
+     popup openings and across pages (up to 500 entries).
+   - **Copy History** copies the whole list as plain text, ready to paste
+     into notes or an email. **Clear History** empties it. Neither changes
+     the highlights on the page.
+7. Click **Revert** to remove all highlights, including your own.
 
 ## How it works
 

@@ -5,6 +5,10 @@
 // support Chinese.
 
 const BATCH_SIZE = 10;
+// Longer selections are cut off so they fit in Gemini Nano's context window.
+const MAX_SELECTION = 1000;
+// Oldest highlights are dropped from the history beyond this many.
+const MAX_HISTORY = 500;
 const LANGUAGE_OPTIONS = {
   expectedInputs: [{ type: "text", languages: ["en"] }],
   expectedOutputs: [{ type: "text", languages: ["en"] }],
@@ -12,11 +16,18 @@ const LANGUAGE_OPTIONS = {
 
 const criteriaInput = document.getElementById("criteria");
 const highlightBtn = document.getElementById("highlight");
+const highlightSelectionBtn = document.getElementById("highlight-selection");
 const revertBtn = document.getElementById("revert");
 const statusDiv = document.getElementById("status");
 const resultsList = document.getElementById("results");
 const legend = document.getElementById("legend");
 const translateCheckbox = document.getElementById("translate");
+const historySection = document.getElementById("history-section");
+const historyList = document.getElementById("history");
+const copyHistoryBtn = document.getElementById("copy-history");
+const clearHistoryBtn = document.getElementById("clear-history");
+
+renderHistory();
 
 // Remember the last description and settings between popup openings.
 criteriaInput.value = localStorage.getItem("criteria") || "";
@@ -103,6 +114,73 @@ highlightBtn.addEventListener("click", async () => {
   }
 });
 
+// Highlights the text selected on the page, then translates (if turned on)
+// and scores it the same way as a headline.
+highlightSelectionBtn.addEventListener("click", async () => {
+  highlightSelectionBtn.disabled = true;
+  let session = null;
+  let translator = null;
+  let tab = null;
+  let item = null;
+  try {
+    // Highlighting is quick, so it's done before creating the models while
+    // this click's user activation (needed for any download) is still valid.
+    const tabId = await injectContentScript();
+    const { selection } = await chrome.tabs.sendMessage(tabId, {
+      type: "HIGHLIGHT_SELECTION",
+    });
+    if (!selection) {
+      setStatus("Select some text on the page first, then click Highlight Selection.");
+      return;
+    }
+    tab = await chrome.tabs.get(tabId);
+    item = { id: "0", text: selection.text.substring(0, MAX_SELECTION), context: "" };
+
+    [session, translator] = await Promise.all([
+      createSession(),
+      translateCheckbox.checked ? createTranslator() : null,
+    ]);
+
+    if (translator) {
+      setStatus("Translating your selection...");
+      [item] = await translateBatch(translator, [item]);
+    }
+    setStatus("Asking Gemini Nano about your selection...");
+    [item] = await analyzeBatch(session, [item], "");
+    setStatus(`Highlighted your selection. Sentiment: ${formatScore(item.score)}.`);
+  } catch (error) {
+    console.error("Error highlighting selection:", error);
+    setStatus(
+      `Error: ${error.message || "Failed to score selection."}` +
+        (item ? "\nYour selection was still highlighted and saved, without a score." : "")
+    );
+  } finally {
+    // Saved even if scoring failed, so the highlight isn't lost.
+    if (item) addToHistory(tab, item);
+    session?.destroy();
+    translator?.destroy();
+    highlightSelectionBtn.disabled = false;
+  }
+});
+
+copyHistoryBtn.addEventListener("click", async () => {
+  const history = loadHistory();
+  try {
+    await navigator.clipboard.writeText(formatHistory(history));
+    setStatus(`Copied ${history.length} highlights to the clipboard.`);
+  } catch (error) {
+    console.error("Error copying history:", error);
+    setStatus(`Error: ${error.message || "Failed to copy history."}`);
+  }
+});
+
+clearHistoryBtn.addEventListener("click", () => {
+  const count = loadHistory().length;
+  localStorage.removeItem("history");
+  renderHistory();
+  setStatus(`Cleared ${count} highlights from the history.`);
+});
+
 revertBtn.addEventListener("click", async () => {
   clearResults();
   try {
@@ -138,7 +216,8 @@ function scoreColor(score) {
   return `color-mix(in srgb, ${color} ${strength}%, #f5f5f5)`;
 }
 
-function addResultRow(tabId, result) {
+// A list row with the score, the text, and the original text if translated.
+function createRow(result) {
   const li = document.createElement("li");
   if (result.matches) li.classList.add("match");
 
@@ -158,10 +237,74 @@ function addResultRow(tabId, result) {
   }
 
   li.append(score, text);
+  return li;
+}
+
+function addResultRow(tabId, result) {
+  const li = createRow(result);
   li.addEventListener("click", () => {
     chrome.tabs.sendMessage(tabId, { type: "SCROLL_TO", id: result.id });
   });
   resultsList.appendChild(li);
+}
+
+// The history of the user's own highlights is kept in the extension's
+// localStorage, newest first, so it survives the popup closing.
+function loadHistory() {
+  try {
+    return JSON.parse(localStorage.getItem("history")) || [];
+  } catch {
+    return [];
+  }
+}
+
+function addToHistory(tab, item) {
+  const history = loadHistory();
+  history.unshift({
+    text: item.text,
+    original: item.original,
+    score: item.score ?? null,
+    title: tab?.title || "",
+    url: tab?.url || "",
+    time: new Date().toISOString(),
+  });
+  localStorage.setItem("history", JSON.stringify(history.slice(0, MAX_HISTORY)));
+  renderHistory();
+}
+
+function renderHistory() {
+  const history = loadHistory();
+  historyList.innerHTML = "";
+  historySection.hidden = !history.length;
+  for (const entry of history) {
+    const li = createRow({ ...entry, matches: true });
+    const source = document.createElement("span");
+    source.className = "source";
+    source.innerText = `${entry.title || entry.url} · ${formatTime(entry.time)}`;
+    source.title = entry.url;
+    li.querySelector(".headline-text").appendChild(source);
+    historyList.appendChild(li);
+  }
+}
+
+function formatTime(iso) {
+  return new Date(iso).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+}
+
+// Plain text for pasting into notes or an email, one block per highlight.
+function formatHistory(history) {
+  return history
+    .map((entry) =>
+      [
+        `[${formatScore(entry.score)}] ${entry.text}`,
+        entry.original && `Original: ${entry.original}`,
+        `From: ${entry.title ? `${entry.title} - ` : ""}${entry.url}`,
+        `Saved: ${formatTime(entry.time)}`,
+      ]
+        .filter(Boolean)
+        .join("\n")
+    )
+    .join("\n\n");
 }
 
 async function injectContentScript() {
