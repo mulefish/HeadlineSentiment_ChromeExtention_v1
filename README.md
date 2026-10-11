@@ -5,8 +5,6 @@
  - https://www.czce.com.cn/
  - https://www.cntac.org.cn/zixun/zhengce/202609/t20260922_4421853.html
 
-
-
 # Headline Highlighter
 
 A Chrome extension that finds the headlines on a page, scores each one's
@@ -23,71 +21,15 @@ built-in **Translator API**. This also runs on your computer.
 ## Example
 ![Example](example.png)
 
+## RAM 
+This is a pretty hungery application - two of the models each weight in at 4 gig each. 
 
-## Requirements
-
-- Desktop Chrome 138 or newer
-- About 22 GB of free disk space for the model
-- A GPU with more than 4 GB of video memory, or 16 GB of RAM
-- An unmetered network connection for the one-time model download
-
-## Install
-
-### Never added an extension before? Start here
-
-This extension isn't in the Chrome Web Store, so you load it straight from a
-folder on your computer ("unpacked"). It takes about two minutes.
-
-1. **Get the files.** Put this whole folder (`sentiment`, containing
-   `manifest.json`, `popup.html`, `popup.js`, `content.js` and `icon.png`)
-   somewhere on your computer, such as `C:\Users\<you>\ml\sentiment`. If you
-   received it as a `.zip` file, right-click it and choose **Extract All**
-   first. Chrome can't load a zip file.
-2. **Open Chrome.** Use desktop Chrome, version 138 or newer. To check, go to
-   the **⋮** menu (top right) → **Help** → **About Google Chrome**.
-3. **Open the extensions page.** Type `chrome://extensions` in the address
-   bar and press Enter. You can also use **⋮** → **Extensions** → **Manage
-   Extensions**.
-4. **Turn on Developer mode.** Click the **Developer mode** toggle in the top
-   right corner of the page. Three new buttons appear on the left: **Load
-   unpacked**, **Pack extension** and **Update**.
-5. **Load the extension.** Click **Load unpacked**. In the folder picker,
-   open the folder you saved in step 1 so you can see `manifest.json` inside
-   it, then click **Select Folder**.
-   - If you get "Manifest file is missing or unreadable", you picked the
-     wrong folder, often the one above it. Pick the folder that directly
-     contains `manifest.json`.
-6. **Check it loaded.** A card called **Headline Highlighter** appears on
-   the page and its toggle should be blue (on). If there's a red **Errors**
-   button on the card, click it to see what went wrong.
-7. **Pin it to the toolbar.** Click the **puzzle-piece icon** to the right
-   of the address bar, find **Headline Highlighter**, and click the **pin**
-   next to it. Its icon now sits in your toolbar.
-8. **Try it.** Open a news website, click the extension's icon, and click
-   **Highlight Headlines**. The first time, Chrome may need to download the
-   Gemini Nano model. If nothing seems to happen, see
-   [Nothing is happening?](#nothing-is-happening) below.
-
-Good to know:
-
-- Keep the folder where it is. Chrome loads the extension from that folder
-  every time it starts, so moving or deleting the folder breaks it. If you
-  move it, remove the extension and load it again from the new place.
-- Chrome may show a "Disable developer mode extensions" warning when it
-  starts. That's normal for unpacked extensions. Click the **X** or **Keep**
-  to dismiss it.
-- To remove the extension, go to `chrome://extensions` and click **Remove**
-  on its card.
-
-### Already know how?
+### Install a Chrome extension
 
 1. Go to `chrome://extensions`.
 2. Turn on **Developer mode** (top right).
 3. Click **Load unpacked** and select this folder.
 4. Pin the extension from the puzzle-piece menu in the toolbar.
-
-After editing any file, click the reload icon on the extension's card in
-`chrome://extensions`, then reload the page you are testing on.
 
 ## Use
 
@@ -169,7 +111,7 @@ Go to `chrome://flags`, set these, then click **Relaunch**:
 | `#prompt-api-for-gemini-nano` | Enabled |
 | `#summarization-api-for-gemini-nano` | Enabled |
 
-## 3. Force the download
+## 3. Force the download ( I needed to do this ) 
 
 Open the browser console on any normal web page: open a site such as a news
 page (not a `chrome://` page), press **F12**, and go to the **Console** tab.
