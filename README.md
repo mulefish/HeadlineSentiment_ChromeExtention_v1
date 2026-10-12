@@ -9,6 +9,9 @@ Chrome's built-in **Gemini Nano**, and can translate Chinese headlines first.
 
 Needs desktop Chrome 138+ and plenty of RAM
 
+## TODO
+Train a micro-model on industry norms and use that. Stretch goal: Train on economy DOW / interest / Brent
+
 ## Install
 
 1. Go to `chrome://extensions`.
